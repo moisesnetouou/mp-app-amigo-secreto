@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Mail, Trash2 } from "lucide-react";
+import { Loader2, Mail, Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";
+import { createGroup, CreateGroupState } from "@/app/app/grupos/novo/actions";
+import { toast } from "sonner"
 
 interface Participant {
   name: string;
@@ -22,6 +24,11 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
   
 
     const [groupName, setGroupName] = useState("")
+
+  const [state, formAction, pending] = useActionState<CreateGroupState, FormData>(createGroup, {
+    success: null,
+    message: ""
+  })
 
   function updateParticipant(index: number, field: keyof Participant, value: string) {
     const updatedParticipants = [...participants];
@@ -39,6 +46,12 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
     setParticipants(participants.concat({ name: "", email: "" }))
   }
 
+  useEffect(() => {
+    if (state.success === false) {
+      toast.error(state.message)
+    }
+  }, [state])
+
   return(
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -48,7 +61,7 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
         </CardDescription>
       </CardHeader>
 
-      <form action={() => {}}>
+      <form action={formAction}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="group-name">Nome do grupo</Label>
@@ -69,7 +82,7 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
                 <Label htmlFor={`name-${index}`}>Nome</Label>
                 <Input 
                   id={`name-${index}`}
-                  name={`name-${index}`}
+                  name="name"
                   value={participant.name}
                   onChange={(e) => {
                     updateParticipant(index, "name", e.target.value)
@@ -83,7 +96,7 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
                 <Label htmlFor={`email-${index}`}>Nome</Label>
                 <Input 
                   id={`email-${index}`}
-                  name={`email-${index}`}
+                  name="email"
                   type="email"
                   value={participant.email}
                   onChange={(e) => {
@@ -121,6 +134,7 @@ export function NewGroupForm({loggedUser}: { loggedUser: {email: string, id: str
 
           <Button type="submit" className="flex items-center space-x-2 w-full md:w-auto">
             <Mail className="w-3 h-3" /> Criar grupo e enviar emails
+            {pending && <Loader2 className="animate-spin" />}
           </Button>
         </CardFooter>
       </form>
