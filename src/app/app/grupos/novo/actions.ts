@@ -2,6 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
+import { Resend } from "resend";
 
 export type CreateGroupState = {
   success: null | boolean;
@@ -63,12 +65,8 @@ export async function createGroup(
     }
   }
 
-  console.log("te createdParticipants", createdParticipants)
-
   const drawnParticipants = drawGroup(createdParticipants)
-
-  console.log("drawnParticipants", drawnParticipants)
-
+  
   const { error: errorDraw } = await supabase
     .from("participants")
     .upsert(drawnParticipants)
@@ -80,7 +78,19 @@ export async function createGroup(
       }
     }
 
-    // redirect(`app/grupos/${newGroup.id}`)
+    const { error: errorResent } = await sendEmailToParticipants(
+      drawnParticipants,
+      groupName as string
+    )
+
+    if(errorResent) {
+      return {
+        success: false,
+        message: errorResent
+      }
+    }
+
+    redirect(`/app/grupos/${newGroup.id}`)
 }
 
 type Participant = {
@@ -111,4 +121,34 @@ function drawGroup(participants: Participant[]) {
       assigned_to: assignedParticipant.id
     }
   })
+}
+
+async function sendEmailToParticipants(participants: Participant[], groupName: string) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  
+  try {
+    await Promise.all(
+      participants.map(participant => {
+        resend.emails.send(
+          {
+            from: "onboarding@resend.dev",
+            to: participant.email,
+            subject: `Sorteio de amigo secreto - ${groupName}`,
+            html: `
+              <h1>Sorteio de amigo secreto</h1>
+              <p>Você está participando do amigo secreto do grupo "${groupName}". <br /> <br /></p>
+              O seu amigo secreto é o <strong>${
+                participants.find(p => p.id === participant.assigned_to)?.name
+              }</strong>!</p>
+              }
+            `
+          }
+        )
+      })
+    )
+
+    return { error: null }
+  } catch {
+    return { error: "Ocorreu um erro ao enviar os emails" }
+  }
 }
