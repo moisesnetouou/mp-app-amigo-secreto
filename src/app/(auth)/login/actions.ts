@@ -11,6 +11,8 @@ export async function login(previousState: LoginState, formData: FormData) {
 
   const email = formData.get('email') as string;
 
+  console.log(email)
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
